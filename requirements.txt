@@ -6,6 +6,4 @@ streamlit
 plotly
 matplotlib
 seaborn
-missingno
-chart-studio
 ipykernel

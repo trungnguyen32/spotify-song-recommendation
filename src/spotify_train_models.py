@@ -1,3 +1,5 @@
+"""Train and serve the Spotify recommender, popularity, and artist-fit models."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +10,11 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyRegressor
-from sklearn.ensemble import ExtraTreesRegressor, HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import (
+    ExtraTreesRegressor,
+    HistGradientBoostingRegressor,
+    RandomForestRegressor,
+)
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GroupShuffleSplit
@@ -77,6 +83,7 @@ DISPLAY_COLUMNS = [
 
 
 def load_modeling_data(path: Path = DATA_PATH) -> pd.DataFrame:
+    """Load the cleaned dataset and enforce the model's input contract."""
     df = pd.read_csv(path)
     required = set(DISPLAY_COLUMNS + NUMERIC_FEATURES + ["track_genre"])
     missing = sorted(required.difference(df.columns))
@@ -100,6 +107,7 @@ def load_modeling_data(path: Path = DATA_PATH) -> pd.DataFrame:
 
 
 def build_recommender(df: pd.DataFrame) -> tuple[StandardScaler, NearestNeighbors, pd.DataFrame]:
+    """Fit the shared feature scaler and global nearest-neighbor index."""
     catalog_columns = list(dict.fromkeys(DISPLAY_COLUMNS + RECOMMENDER_FEATURES))
     song_catalog = df[catalog_columns].copy()
     song_catalog = song_catalog.drop_duplicates(subset=["track_id"]).reset_index(drop=True)
@@ -117,6 +125,7 @@ def build_recommender(df: pd.DataFrame) -> tuple[StandardScaler, NearestNeighbor
 
 
 def build_popularity_preprocessor() -> ColumnTransformer:
+    """Scale numeric values and encode genre for popularity regression."""
     return ColumnTransformer(
         transformers=[
             ("numeric", StandardScaler(), NUMERIC_FEATURES),
@@ -127,6 +136,7 @@ def build_popularity_preprocessor() -> ColumnTransformer:
 
 
 def get_popularity_model_candidates() -> dict[str, object]:
+    """Return the reproducible set of baseline and candidate regressors."""
     return {
         "DummyMean": DummyRegressor(strategy="mean"),
         "Ridge": Ridge(alpha=10.0),
@@ -163,6 +173,7 @@ def get_popularity_model_candidates() -> dict[str, object]:
 
 
 def build_popularity_model(model_name: str = BASE_POPULARITY_MODEL_NAME) -> Pipeline:
+    """Build one popularity model using the shared feature preprocessing."""
     candidates = get_popularity_model_candidates()
     if model_name not in candidates:
         raise ValueError(f"Unknown popularity model: {model_name}. Available: {sorted(candidates)}")
@@ -179,12 +190,14 @@ def build_popularity_model(model_name: str = BASE_POPULARITY_MODEL_NAME) -> Pipe
 
 
 def split_train_test_by_track(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Create a grouped holdout split to reduce duplicate-track leakage."""
     splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=RANDOM_STATE)
     train_idx, test_idx = next(splitter.split(df, df["popularity"], groups=df["track_id"]))
     return df.iloc[train_idx].copy(), df.iloc[test_idx].copy()
 
 
 def score_regression_model(y_true: pd.Series, predictions: np.ndarray) -> dict[str, float]:
+    """Calculate the regression metrics used throughout model comparison."""
     return {
         "mae": float(mean_absolute_error(y_true, predictions)),
         "rmse": float(np.sqrt(mean_squared_error(y_true, predictions))),
@@ -193,17 +206,14 @@ def score_regression_model(y_true: pd.Series, predictions: np.ndarray) -> dict[s
 
 
 def evaluate_popularity_models(df: pd.DataFrame) -> pd.DataFrame:
+    """Evaluate every candidate on one consistent track-grouped holdout set."""
     train, test = split_train_test_by_track(df)
     rows = []
 
     for model_name in get_popularity_model_candidates():
         model = build_popularity_model(model_name)
-        if model_name == "DummyMean":
-            model.fit(train[["popularity"]], train["popularity"])
-            predictions = model.predict(test[["popularity"]])
-        else:
-            model.fit(train[POPULARITY_FEATURES], train["popularity"])
-            predictions = model.predict(test[POPULARITY_FEATURES])
+        model.fit(train[POPULARITY_FEATURES], train["popularity"])
+        predictions = model.predict(test[POPULARITY_FEATURES])
 
         metrics = score_regression_model(test["popularity"], predictions)
         rows.append(
@@ -221,17 +231,20 @@ def evaluate_popularity_models(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def popularity_band(score: float) -> str:
+    """Map a clipped popularity score to a reader-facing band."""
     clipped_score = float(np.clip(score, 0, 100))
-    for band in POPULARITY_BANDS:
-        if band["min"] <= clipped_score <= band["max"]:
-            return band["label"]
-    return "Unknown"
+    if clipped_score < 35:
+        return "Low"
+    if clipped_score < 60:
+        return "Moderate"
+    return "High"
 
 
 def evaluate_popularity_model(
     df: pd.DataFrame,
     model_name: str = BASE_POPULARITY_MODEL_NAME,
 ) -> tuple[Pipeline, dict[str, float]]:
+    """Fit and evaluate a selected model on the grouped holdout split."""
     train, test = split_train_test_by_track(df)
     model = build_popularity_model(model_name)
     model.fit(train[POPULARITY_FEATURES], train["popularity"])
@@ -251,12 +264,14 @@ def train_final_popularity_model(
     df: pd.DataFrame,
     model_name: str = BASE_POPULARITY_MODEL_NAME,
 ) -> Pipeline:
+    """Fit the selected popularity model on all available cleaned rows."""
     model = build_popularity_model(model_name)
     model.fit(df[POPULARITY_FEATURES], df["popularity"])
     return model
 
 
 def predict_base_popularity(input_profile: dict, model: Pipeline) -> tuple[float, str]:
+    """Predict composition-only popularity and return its display band."""
     input_df = pd.DataFrame([input_profile])
     prediction = float(np.clip(model.predict(input_df[POPULARITY_FEATURES])[0], 0, 100))
     return prediction, popularity_band(prediction)
@@ -269,14 +284,15 @@ def build_model_metadata(
     model_comparison: pd.DataFrame,
     selected_model_name: str,
 ) -> dict:
+    """Build portable model documentation for the dashboard and repository."""
     selected_metrics = (
         model_comparison[model_comparison["model"] == selected_model_name]
         .iloc[0]
         .to_dict()
     )
     return {
-        "data_path": str(DATA_PATH),
-        "model_dir": str(MODEL_DIR),
+        "data_path": DATA_PATH.relative_to(PROJECT_ROOT).as_posix(),
+        "model_dir": MODEL_DIR.relative_to(PROJECT_ROOT).as_posix(),
         "row_count_after_cleaning": int(len(df)),
         "song_catalog_rows": int(len(song_catalog)),
         "artist_profile_rows": int(len(artist_profiles)),
@@ -298,10 +314,12 @@ def build_model_metadata(
 
 
 def split_artist_names(artists: str) -> list[str]:
+    """Split the dataset's semicolon-delimited artist field."""
     return [name.strip() for name in str(artists).split(";") if name.strip()]
 
 
 def build_artist_profiles(df: pd.DataFrame, base_model: Pipeline, min_tracks: int = 5) -> pd.DataFrame:
+    """Aggregate artist style and shrink residual popularity lift by evidence."""
     work = df.copy()
     work["base_popularity_prediction"] = base_model.predict(work[POPULARITY_FEATURES])
     work["artist_lift"] = work["popularity"] - work["base_popularity_prediction"]
@@ -330,7 +348,20 @@ def build_artist_profiles(df: pd.DataFrame, base_model: Pipeline, min_tracks: in
     ).reset_index(drop=True)
     return profiles
 
+
+def cosine_similarity_to_profile(
+    input_scaled: np.ndarray,
+    candidate_scaled: np.ndarray,
+) -> np.ndarray:
+    """Calculate stable cosine similarities from one profile to candidates."""
+    input_norm = np.linalg.norm(input_scaled, axis=1)[0]
+    candidate_norm = np.linalg.norm(candidate_scaled, axis=1)
+    denominator = np.maximum(candidate_norm * input_norm, 1e-9)
+    return np.clip((candidate_scaled @ input_scaled.T).ravel() / denominator, -1, 1)
+
+
 def deduplicate_song_results(results: pd.DataFrame, top_n: int) -> pd.DataFrame:
+    """Keep the best row for each normalized song-and-artist pair."""
     results = results.copy()
 
     results["song_artist_key"] = (
@@ -340,7 +371,7 @@ def deduplicate_song_results(results: pd.DataFrame, top_n: int) -> pd.DataFrame:
     )
     results = (
         results.sort_values(["similarity_score", "popularity"], ascending=False)
-        .drop_duplicates(subset = ["song_artist_key"], keep="first")
+        .drop_duplicates(subset=["song_artist_key"], keep="first")
         .drop(columns=["song_artist_key"])
         .head(top_n)
     )
@@ -354,6 +385,7 @@ def recommend_songs(
     top_n: int = 10,
     genre: str | None = None,
 ) -> pd.DataFrame:
+    """Recommend compositionally similar songs, with strict genre filtering."""
     input_row = pd.DataFrame([{feature: input_profile[feature] for feature in RECOMMENDER_FEATURES}])
     input_scaled = scaler.transform(input_row)
 
@@ -361,10 +393,10 @@ def recommend_songs(
         genre_catalog = song_catalog[song_catalog["track_genre"].str.lower() == genre.lower()].copy()
         if not genre_catalog.empty:
             genre_scaled = scaler.transform(genre_catalog[RECOMMENDER_FEATURES])
-            input_norm = np.linalg.norm(input_scaled, axis=1)[0]
-            genre_norm = np.linalg.norm(genre_scaled, axis=1)
-            similarity = (genre_scaled @ input_scaled.T).ravel() / np.maximum(genre_norm * input_norm, 1e-9)
-            genre_catalog["similarity_score"] = np.clip(similarity, -1, 1)
+            genre_catalog["similarity_score"] = cosine_similarity_to_profile(
+                input_scaled,
+                genre_scaled,
+            )
             return deduplicate_song_results(genre_catalog, top_n)
 
     distances, indices = recommender.kneighbors(input_scaled, n_neighbors=min(200, len(song_catalog)))
@@ -382,6 +414,7 @@ def recommend_artists(
     top_n: int = 10,
     genre: str | None = None,
 ) -> pd.DataFrame:
+    """Rank artists by style fit and historically adjusted popularity lift."""
     profiles = artist_profiles.copy()
     if genre:
         genre_matches = profiles[profiles["main_genre"].str.lower() == genre.lower()]
@@ -392,10 +425,7 @@ def recommend_artists(
     input_scaled = scaler.transform(input_row)
     profile_scaled = scaler.transform(profiles[RECOMMENDER_FEATURES])
 
-    input_norm = np.linalg.norm(input_scaled, axis=1)[0]
-    profile_norm = np.linalg.norm(profile_scaled, axis=1)
-    similarity = (profile_scaled @ input_scaled.T).ravel() / np.maximum(profile_norm * input_norm, 1e-9)
-    similarity = np.clip(similarity, -1, 1)
+    similarity = cosine_similarity_to_profile(input_scaled, profile_scaled)
     similarity_0_1 = (similarity + 1) / 2
 
     result = profiles[

@@ -11,9 +11,13 @@ spotify-song-recommendation/
     processed/          # cleaned datasets for EDA and modeling
   models/               # trained model artifacts and model metadata
   notebooks/            # EDA and modeling notebooks
+  reports/
+    figures/             # generated EDA charts
+    tables/              # generated EDA summary tables
   src/
-    app.py              # Streamlit dashboard
-    spotify_train_models.py
+    app.py                       # Streamlit dashboard
+    spotify_eda_analysis.py      # reusable popularity-focused EDA
+    spotify_train_models.py      # training and recommendation functions
   requirements.txt
 ```
 
@@ -22,7 +26,8 @@ spotify-song-recommendation/
 Open PowerShell:
 
 ```powershell
-cd D:\DA\spotify-song-recommendation
+git clone https://github.com/trungnguyen32/spotify-song-recommendation.git
+cd spotify-song-recommendation
 code .
 ```
 
@@ -46,6 +51,12 @@ Run the dashboard:
 .\.venv\Scripts\python -m streamlit run src\app.py
 ```
 
+Generate the popularity-focused EDA report:
+
+```powershell
+.\.venv\Scripts\python src\spotify_eda_analysis.py
+```
+
 Retrain model artifacts:
 
 ```powershell
@@ -59,3 +70,9 @@ Retrain model artifacts:
 - The base popularity model excludes artist, album, track name, and track ID to reduce artist-fame bias.
 - Artist-fit recommendations combine style similarity with historical artist residual lift.
 - Popularity predictions are estimates, not guarantees of commercial performance or virality.
+
+## EDA Focus
+
+The EDA notebook emphasizes which composition features are associated with popularity. It keeps one row per track ID, compares Pearson and Spearman correlations, repeats the analysis within genre, examines genre-adjusted feature trends, and reports eta-squared effect sizes for discrete attributes such as key, mode, time signature, and explicit status.
+
+In the current dataset, every individual within-genre feature correlation is very weak: the largest absolute Spearman correlation is about `0.03`. Categorical effect sizes are also small. This supports treating the popularity model as a composition-only baseline rather than a prediction of commercial success. These results describe association rather than causation.
