@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn==1.7.2
+joblib
+streamlit
+plotly
+matplotlib
+seaborn
+missingno
+chart-studio
+ipykernel

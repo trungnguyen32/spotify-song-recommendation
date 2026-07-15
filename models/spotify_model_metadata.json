@@ -1,0 +1,150 @@
+{
+  "data_path": "data/processed/spotify_cleaned_eda.csv",
+  "model_dir": "models",
+  "row_count_after_cleaning": 113842,
+  "song_catalog_rows": 89583,
+  "artist_profile_rows": 6040,
+  "selected_base_popularity_model": "HistGB_tuned",
+  "selected_base_popularity_metrics": {
+    "model": "HistGB_tuned",
+    "mae": 12.993258779906522,
+    "rmse": 17.793215352141125,
+    "r2": 0.36243685130104,
+    "train_rows": 91072,
+    "test_rows": 22770,
+    "unique_train_tracks": 71666,
+    "unique_test_tracks": 17917
+  },
+  "model_comparison": [
+    {
+      "model": "HistGB_tuned",
+      "mae": 12.993258779906522,
+      "rmse": 17.793215352141125,
+      "r2": 0.36243685130104,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    },
+    {
+      "model": "RandomForest",
+      "mae": 13.694284977485745,
+      "rmse": 18.0071319087475,
+      "r2": 0.34701466393507574,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    },
+    {
+      "model": "ExtraTrees",
+      "mae": 13.47777479535856,
+      "rmse": 18.29651640848813,
+      "r2": 0.3258583563026368,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    },
+    {
+      "model": "HistGB_current",
+      "mae": 13.740030500566371,
+      "rmse": 18.37418055090672,
+      "r2": 0.3201230838748724,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    },
+    {
+      "model": "Ridge",
+      "mae": 14.130365413481869,
+      "rmse": 19.14262094037528,
+      "r2": 0.26206665404676044,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    },
+    {
+      "model": "DummyMean",
+      "mae": 18.89585696923866,
+      "rmse": 22.285945395267685,
+      "r2": -0.00017607301614464,
+      "train_rows": 91072,
+      "test_rows": 22770,
+      "unique_train_tracks": 71666,
+      "unique_test_tracks": 17917
+    }
+  ],
+  "popularity_bands": [
+    {
+      "label": "Low",
+      "min": 0,
+      "max": 34
+    },
+    {
+      "label": "Moderate",
+      "min": 35,
+      "max": 59
+    },
+    {
+      "label": "High",
+      "min": 60,
+      "max": 100
+    }
+  ],
+  "numeric_features": [
+    "danceability",
+    "energy",
+    "loudness",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_min",
+    "explicit_int",
+    "key",
+    "mode",
+    "time_signature"
+  ],
+  "recommender_features": [
+    "danceability",
+    "energy",
+    "loudness",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_min",
+    "explicit_int"
+  ],
+  "popularity_features": [
+    "danceability",
+    "energy",
+    "loudness",
+    "speechiness",
+    "acousticness",
+    "instrumentalness",
+    "liveness",
+    "valence",
+    "tempo",
+    "duration_min",
+    "explicit_int",
+    "key",
+    "mode",
+    "time_signature",
+    "track_genre"
+  ],
+  "notes": [
+    "Base popularity model excludes artist, album, track name, and track id.",
+    "Selected model is tuned gradient boosting because it performed best in the comparison split.",
+    "Artist-assisted popularity uses historical artist residual lift and style similarity.",
+    "Evaluation uses GroupShuffleSplit by track_id to reduce duplicate-song leakage.",
+    "Popularity is a social/commercial outcome, so moderate R2 is expected with audio features only."
+  ]
+}
