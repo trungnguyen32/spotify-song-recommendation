@@ -24,3 +24,9 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+
+# Rebuild with src/spotify_data_pipeline.py
+data/processed/canonical/
+reports/sql/
+.env
+.env.*

@@ -2,6 +2,32 @@
 
 Composer-assistant dashboard for Spotify song analysis, similarity search, fame-free popularity prediction, and artist-fit recommendations.
 
+## Development status: reproducible data preparation
+
+The first upgrade adds a validated raw-CSV pipeline, canonical track and genre
+membership tables, a quality report, automated data-contract tests, and a GitHub
+Actions test workflow. See [the data contract](docs/data_contract.md) for cleaning
+rules, measured counts and the next milestone. The current app and saved models
+continue to use the existing datasets; model migration is planned.
+
+## PostgreSQL and SQL analytics
+
+A transactional snapshot loader, keyed track/genre tables, analytical views,
+four SQL investigations, CSV exports and PostgreSQL integration tests are now
+implemented. See [database setup and methodology](docs/postgresql.md).
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-db.txt
+# Set SPOTIFY_DATABASE_URL to your dedicated project database first.
+.\.venv\Scripts\python.exe src\spotify_database.py
+.\.venv\Scripts\python.exe src\spotify_sql_analytics.py
+```
+
+```powershell
+.\.venv\Scripts\python.exe src\spotify_data_pipeline.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
 ## Project Structure
 
 ```text
