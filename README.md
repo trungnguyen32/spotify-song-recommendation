@@ -99,6 +99,11 @@ Retrain model artifacts:
 
 ## EDA Focus
 
+The [canonical catalog statistical analysis](docs/statistical_analysis.md) measures
+audio–popularity associations before and after genre adjustment. It includes
+track-level bootstrap intervals, genre distributions, and a repeatable Python
+workflow backed by PostgreSQL.
+
 The EDA notebook emphasizes which composition features are associated with popularity. It keeps one row per track ID, compares Pearson and Spearman correlations, repeats the analysis within genre, examines genre-adjusted feature trends, and reports eta-squared effect sizes for discrete attributes such as key, mode, time signature, and explicit status.
 
 In the current dataset, every individual within-genre feature correlation is very weak: the largest absolute Spearman correlation is about `0.03`. Categorical effect sizes are also small. This supports treating the popularity model as a composition-only baseline rather than a prediction of commercial success. These results describe association rather than causation.

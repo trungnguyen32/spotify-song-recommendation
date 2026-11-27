@@ -1,0 +1,11 @@
+{
+  "source_sha256": "b202fa49909b2d5cef71a04b1d21243cfeb36414535f2ca9272aa646721177bd",
+  "track_count": 89583,
+  "genre_count": 114,
+  "membership_count": 113392,
+  "popularity_conflict_tracks": 720,
+  "seed": 42,
+  "bootstrap_resamples": 1000,
+  "numpy_version": "2.5.1",
+  "pandas_version": "3.0.3"
+}
